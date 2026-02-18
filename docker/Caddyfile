@@ -1,0 +1,15 @@
+{$BASE_URL} {
+    # LSP - Language Server Protocol
+    reverse_proxy /ws/* http://windmill_extra:3001
+
+    # Multiplayer
+    reverse_proxy /ws_mp/* http://windmill_extra:3002
+
+    # Debugger - DAP WebSocket
+    handle_path /ws_debug/* {
+        reverse_proxy http://windmill_extra:3003
+    }
+
+    # Default: Windmill server
+    reverse_proxy /* http://windmill_server:8000
+}

@@ -1,0 +1,6 @@
+summary: Demo Environment Provisioner
+display_name: demo_provisioner
+extra_perms:
+  u/admin: true
+owners:
+  - u/admin

@@ -1,0 +1,16 @@
+# Node modules
+windmill-workspace/**/node_modules/
+
+# Local wmill config
+windmill-workspace/.wmill/
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/

@@ -1,0 +1,45 @@
+summary: Cleanup Expired Demo Environments
+description: Checks for expired demo environments and removes their containers
+value:
+  modules:
+    - id: get_expired
+      value:
+        lock: '!inline get_expired.inline_script.lock'
+        type: rawscript
+        content: '!inline get_expired.inline_script.py'
+        language: python3
+        input_transforms: {}
+    - id: cleanup_each
+      value:
+        type: forloopflow
+        modules:
+          - id: cleanup_container
+            value:
+              path: f/demo_provisioner/cleanup_container
+              type: script
+              input_transforms:
+                customer_name:
+                  expr: flow_input.iter.value.customer_name
+                  type: javascript
+        iterator:
+          expr: results.get_expired
+          type: javascript
+        parallel: false
+        skip_failures: true
+    - id: summary
+      value:
+        lock: '!inline summary.inline_script.lock'
+        type: rawscript
+        content: '!inline summary.inline_script.ts'
+        language: bun
+        input_transforms:
+          expired:
+            expr: results.get_expired
+            type: javascript
+          cleanupResults:
+            expr: results.cleanup_each
+            type: javascript
+schema:
+  type: object
+  properties: {}
+  required: []

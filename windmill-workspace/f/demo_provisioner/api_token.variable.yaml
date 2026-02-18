@@ -1,0 +1,3 @@
+description: API token for demo containers to call back to Windmill
+value: OrS+chPU7Rd7udFcycYH1ZLgULw/Dg/zcTqtGWMlSl1D6/eZfjPbohAi2mp0RmZ8
+is_secret: true

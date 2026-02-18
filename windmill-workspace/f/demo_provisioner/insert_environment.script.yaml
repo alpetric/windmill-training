@@ -1,0 +1,31 @@
+summary: Insert demo environment record
+description: Inserts a new demo environment record into the database
+lock: '!inline f/demo_provisioner/insert_environment.script.lock'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    app_name:
+      type: string
+      default: Demo Workspace
+      originalType: string
+    customer_name:
+      type: string
+      default: null
+      originalType: string
+    num_rooms:
+      type: integer
+      default: 4
+    num_users:
+      type: integer
+      default: 10
+    status:
+      type: string
+      default: pending_approval
+      originalType: string
+    ttl_minutes:
+      type: integer
+      default: 30
+  required:
+    - customer_name

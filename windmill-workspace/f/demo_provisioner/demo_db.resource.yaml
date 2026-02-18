@@ -1,0 +1,9 @@
+description: null
+value:
+  dbname: demo_db
+  host: training-demo-postgres
+  password: demo123
+  port: 5432
+  sslmode: disable
+  user: demo
+resource_type: postgresql

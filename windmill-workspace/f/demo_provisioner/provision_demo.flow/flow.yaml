@@ -1,0 +1,240 @@
+summary: Provision demo environment with approval
+description: |
+  Validates inputs, requests manager approval, provisions the demo environment,
+  and logs the result to the database.
+value:
+  modules:
+    - id: validate_request
+      summary: Validate the request
+      value:
+        type: rawscript
+        content: '!inline validate_the_request.inline_script.ts'
+        input_transforms:
+          app_name:
+            type: javascript
+            expr: flow_input.app_name
+          customer_name:
+            type: javascript
+            expr: flow_input.customer_name
+          num_rooms:
+            type: javascript
+            expr: flow_input.num_rooms
+          num_users:
+            type: javascript
+            expr: flow_input.num_users
+          ttl_minutes:
+            type: javascript
+            expr: flow_input.ttl_minutes
+        lock: '!inline validate_the_request.inline_script.lock'
+        language: bun
+    - id: insert_pending
+      summary: Insert pending record to database
+      value:
+        type: script
+        input_transforms:
+          app_name:
+            type: javascript
+            expr: results.validate_request.app_name
+          customer_name:
+            type: javascript
+            expr: results.validate_request.customer_name
+          num_rooms:
+            type: javascript
+            expr: results.validate_request.num_rooms
+          num_users:
+            type: javascript
+            expr: results.validate_request.num_users
+          status:
+            type: static
+            value: pending_approval
+          ttl_minutes:
+            type: javascript
+            expr: results.validate_request.ttl_minutes
+        path: f/demo_provisioner/insert_environment
+    - id: approval
+      summary: Request approval
+      value:
+        type: rawscript
+        content: '!inline request_approval.inline_script.ts'
+        input_transforms:
+          app_name:
+            type: javascript
+            expr: results.validate_request.app_name
+          customer_name:
+            type: javascript
+            expr: results.validate_request.customer_name
+          num_rooms:
+            type: javascript
+            expr: results.validate_request.num_rooms
+          num_users:
+            type: javascript
+            expr: results.validate_request.num_users
+          record_id:
+            type: javascript
+            expr: results.insert_pending.id
+          requester:
+            type: javascript
+            expr: flow_input.requester || "Unknown"
+          ttl_minutes:
+            type: javascript
+            expr: results.validate_request.ttl_minutes
+        lock: '!inline request_approval.inline_script.lock'
+        language: bun
+      suspend:
+        hide_cancel: false
+        required_events: 1
+        resume_form:
+          schema:
+            type: object
+            properties:
+              approved:
+                type: boolean
+                description: Approve this demo environment request?
+                default: true
+              notes:
+                type: string
+                description: Optional notes for the requester
+        self_approval_disabled: false
+        timeout: 86400
+        user_auth_required: false
+    - id: check_approval
+      summary: Check if approved
+      value:
+        type: branchone
+        branches:
+          - summary: Approved
+            modules:
+              - id: provision
+                summary: Provision the environment
+                value:
+                  type: script
+                  input_transforms:
+                    app_name:
+                      type: javascript
+                      expr: results.validate_request.app_name
+                    customer_name:
+                      type: javascript
+                      expr: results.validate_request.customer_name
+                    num_rooms:
+                      type: javascript
+                      expr: results.validate_request.num_rooms
+                    num_users:
+                      type: javascript
+                      expr: results.validate_request.num_users
+                    record_id:
+                      type: javascript
+                      expr: results.insert_pending.id
+                    ttl_minutes:
+                      type: javascript
+                      expr: results.validate_request.ttl_minutes
+                  path: f/demo_provisioner/provision_environment
+              - id: update_active
+                summary: Update record to active
+                value:
+                  type: script
+                  input_transforms:
+                    id:
+                      type: javascript
+                      expr: results.insert_pending.id
+                    approved_by:
+                      type: javascript
+                      expr: 'approvers[0] || "auto"'
+                    container_id:
+                      type: javascript
+                      expr: results.provision.container_id
+                    container_name:
+                      type: javascript
+                      expr: results.provision.container_name
+                    expires_at:
+                      type: javascript
+                      expr: results.provision.expires_at
+                    port:
+                      type: javascript
+                      expr: results.provision.port
+                    status:
+                      type: static
+                      value: active
+                    url:
+                      type: javascript
+                      expr: results.provision.url
+                  path: f/demo_provisioner/update_environment
+            expr: resume.approved === true
+            parallel: true
+            skip_failure: true
+        default:
+          - id: rejected
+            summary: Handle rejection
+            value:
+              type: script
+              input_transforms:
+                id:
+                  type: javascript
+                  expr: results.insert_pending.id
+                rejection_reason:
+                  type: javascript
+                  expr: resume.notes || "No reason provided"
+                status:
+                  type: static
+                  value: rejected
+              path: f/demo_provisioner/update_environment
+    - id: final_result
+      summary: Return final result
+      value:
+        type: rawscript
+        content: '!inline return_final_result.inline_script.ts'
+        input_transforms:
+          approved:
+            type: javascript
+            expr: results.provision != null
+          provision_result:
+            type: javascript
+            expr: results.provision || null
+          record_id:
+            type: javascript
+            expr: results.insert_pending.id
+          update_result:
+            type: javascript
+            expr: results.update_active || results.rejected
+        lock: '!inline return_final_result.inline_script.lock'
+        language: bun
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  order:
+    - customer_name
+    - app_name
+    - num_users
+    - num_rooms
+    - ttl_minutes
+    - requester
+  properties:
+    app_name:
+      type: string
+      description: Name to display in the demo app
+      default: Demo Workspace
+    customer_name:
+      type: string
+      description: Name of the customer for this demo
+    num_rooms:
+      type: integer
+      description: Number of meeting rooms
+      default: 4
+      maximum: 10
+      minimum: 1
+    num_users:
+      type: integer
+      description: Number of users to generate
+      default: 10
+      maximum: 50
+      minimum: 1
+    requester:
+      type: string
+      description: Who is requesting this demo
+    ttl_minutes:
+      type: integer
+      description: How long the demo should run (minutes)
+      default: 30
+      maximum: 480
+      minimum: 5
+  required:
+    - customer_name

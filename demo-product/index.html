@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Team Workspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .user-card { transition: all 0.2s ease; }
+    .user-card:hover { transform: translateY(-2px); }
+    .room-card { transition: all 0.2s ease; min-height: 120px; }
+    .room-card.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
+    .timer-warning { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto p-8 max-w-6xl">
+    <!-- Header with app name and timer -->
+    <div class="flex justify-between items-center mb-8 bg-white rounded-lg shadow p-6">
+      <div>
+        <h1 id="app-name" class="text-3xl font-bold text-gray-800">Demo Workspace</h1>
+        <p id="customer-name" class="text-gray-500 mt-1">Customer Demo</p>
+      </div>
+      <div class="text-right">
+        <div class="text-sm text-gray-500 uppercase tracking-wide">Environment expires in</div>
+        <div id="timer" class="text-3xl font-mono font-bold text-red-600">--:--:--</div>
+        <div id="timer-label" class="text-xs text-gray-400">hours : minutes : seconds</div>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="grid grid-cols-3 gap-4 mb-8">
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600" id="total-users">0</div>
+        <div class="text-sm text-gray-500">Total Users</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600" id="total-rooms">0</div>
+        <div class="text-sm text-gray-500">Rooms</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600" id="assigned-users">0</div>
+        <div class="text-sm text-gray-500">Assigned</div>
+      </div>
+    </div>
+
+    <!-- Main grid: Users and Rooms -->
+    <div class="grid grid-cols-4 gap-8">
+      <!-- Users panel -->
+      <div class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+          </svg>
+          Unassigned Users
+        </h2>
+        <div id="users" class="space-y-2 max-h-96 overflow-y-auto">
+          <!-- Generated users appear here -->
+        </div>
+        <div id="no-users" class="text-gray-400 text-sm text-center py-4 hidden">
+          All users assigned!
+        </div>
+      </div>
+
+      <!-- Rooms grid -->
+      <div class="col-span-3">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+          Meeting Rooms
+        </h2>
+        <div id="rooms" class="grid grid-cols-2 gap-4">
+          <!-- Generated rooms appear here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-8 text-center text-gray-400 text-sm">
+      Demo Environment powered by Windmill
+    </div>
+  </div>
+
+  <script>
+    // Config will be fetched from local Flask backend
+    let CONFIG = {
+      appName: 'Loading...',
+      customerName: '',
+      numUsers: 0,
+      numRooms: 0,
+      expiresAt: null
+    };
+
+    // Generate fake users
+    const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Quinn', 'Avery', 'Parker', 'Sage', 'Drew', 'Jamie', 'Sam', 'Charlie', 'Dakota'];
+    const lastNames = ['Smith', 'Johnson', 'Chen', 'Garcia', 'Kim', 'Patel', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas'];
+    const avatarColors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-yellow-500', 'bg-red-500', 'bg-teal-500'];
+
+    function generateUsers(count) {
+      const users = [];
+      const usedNames = new Set();
+
+      for (let i = 0; i < count; i++) {
+        let name;
+        do {
+          const first = firstNames[Math.floor(Math.random() * firstNames.length)];
+          const last = lastNames[Math.floor(Math.random() * lastNames.length)];
+          name = `${first} ${last}`;
+        } while (usedNames.has(name));
+        usedNames.add(name);
+
+        users.push({
+          id: i + 1,
+          name: name,
+          initials: name.split(' ').map(n => n[0]).join(''),
+          color: avatarColors[i % avatarColors.length],
+          room: null
+        });
+      }
+      return users;
+    }
+
+    const roomIcons = ['Conference', 'Huddle', 'Board', 'Training', 'Workshop', 'Innovation', 'Strategy', 'Creative'];
+
+    function generateRooms(count) {
+      return Array.from({length: count}, (_, i) => ({
+        id: i + 1,
+        name: `${roomIcons[i % roomIcons.length]} Room ${i + 1}`,
+        capacity: Math.floor(Math.random() * 3) + 3 // 3-5 capacity
+      }));
+    }
+
+    // Fetch config and state from local Flask backend
+    async function loadConfig() {
+      try {
+        const [configRes, stateRes] = await Promise.all([
+          fetch('/api/config'),
+          fetch('/api/state')
+        ]);
+        const config = await configRes.json();
+        const state = await stateRes.json();
+        return { ...config, app_state: state };
+      } catch (e) {
+        console.log('Failed to load config:', e);
+        return null;
+      }
+    }
+
+    async function saveAppState() {
+      try {
+        await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ users, rooms })
+        });
+      } catch (e) {
+        console.log('Failed to save app state:', e);
+      }
+    }
+
+    // State
+    let users = [];
+    let rooms = [];
+
+    // Initialize on startup - fetch everything from local backend
+    async function init() {
+      const data = await loadConfig();
+      if (data) {
+        // Set config from database
+        CONFIG.appName = data.app_name;
+        CONFIG.customerName = data.customer_name;
+        CONFIG.numUsers = data.num_users;
+        CONFIG.numRooms = data.num_rooms;
+        CONFIG.expiresAt = data.expires_at;
+
+        // Set timer
+        if (CONFIG.expiresAt) {
+          endTime = new Date(CONFIG.expiresAt);
+        }
+
+        // Load saved state or generate fresh
+        if (data.app_state?.users && data.app_state?.rooms) {
+          users = data.app_state.users;
+          rooms = data.app_state.rooms;
+        } else {
+          users = generateUsers(CONFIG.numUsers);
+          rooms = generateRooms(CONFIG.numRooms);
+        }
+      }
+
+      render();
+      updateTimer();
+    }
+
+    // Timer - will be set from data loaded from Windmill
+    let endTime = new Date(Date.now() + CONFIG.ttlMinutes * 60 * 1000);
+
+    function updateTimer() {
+      const now = new Date();
+      const diff = endTime - now;
+      const timerEl = document.getElementById('timer');
+
+      if (diff <= 0) {
+        timerEl.textContent = 'EXPIRED';
+        timerEl.classList.add('timer-warning');
+        document.body.classList.add('bg-red-50');
+        return;
+      }
+
+      const hours = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      timerEl.textContent = `${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+
+      // Warning colors
+      if (diff < 300000) { // Under 5 minutes
+        timerEl.classList.add('timer-warning');
+      } else if (diff < 600000) { // Under 10 minutes
+        timerEl.classList.remove('text-red-600');
+        timerEl.classList.add('text-orange-500');
+      }
+    }
+
+    setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // Update stats
+    function updateStats() {
+      document.getElementById('total-users').textContent = users.length;
+      document.getElementById('total-rooms').textContent = rooms.length;
+      document.getElementById('assigned-users').textContent = users.filter(u => u.room !== null).length;
+    }
+
+    // Render
+    function render() {
+      document.getElementById('app-name').textContent = CONFIG.appName;
+      document.getElementById('customer-name').textContent = CONFIG.customerName;
+      document.title = `${CONFIG.appName} - ${CONFIG.customerName}`;
+
+      // Render unassigned users
+      const usersEl = document.getElementById('users');
+      const unassignedUsers = users.filter(u => u.room === null);
+
+      document.getElementById('no-users').classList.toggle('hidden', unassignedUsers.length > 0);
+
+      usersEl.innerHTML = unassignedUsers.map(u => `
+        <div draggable="true" data-user-id="${u.id}"
+             class="user-card flex items-center p-2 ${u.color.replace('bg-', 'bg-opacity-10 bg-')} rounded-lg cursor-move hover:shadow-md border border-transparent hover:border-gray-200">
+          <div class="${u.color} text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium mr-3">
+            ${u.initials}
+          </div>
+          <span class="text-sm font-medium text-gray-700">${u.name}</span>
+        </div>
+      `).join('');
+
+      // Render rooms
+      const roomsEl = document.getElementById('rooms');
+      roomsEl.innerHTML = rooms.map(r => {
+        const roomUsers = users.filter(u => u.room === r.id);
+        const isFull = roomUsers.length >= r.capacity;
+
+        return `
+          <div class="room-card bg-white rounded-lg shadow p-4 border-2 border-dashed ${isFull ? 'border-gray-200 bg-gray-50' : 'border-gray-300'}"
+               data-room-id="${r.id}"
+               ondragover="if(!${isFull}) event.preventDefault(); this.classList.add('drag-over')"
+               ondragleave="this.classList.remove('drag-over')"
+               ondrop="handleDrop(event, ${r.id}); this.classList.remove('drag-over')">
+            <div class="flex justify-between items-start mb-3">
+              <h3 class="font-semibold text-gray-800">${r.name}</h3>
+              <span class="text-xs px-2 py-1 rounded ${isFull ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">
+                ${roomUsers.length}/${r.capacity}
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${roomUsers.map(u => `
+                <div class="flex items-center ${u.color.replace('bg-', 'bg-opacity-10 bg-')} rounded-full pr-2 group cursor-pointer"
+                     onclick="removeFromRoom(${u.id})" title="Click to remove">
+                  <div class="${u.color} text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium">
+                    ${u.initials}
+                  </div>
+                  <span class="text-xs ml-1 text-gray-600">${u.name.split(' ')[0]}</span>
+                  <span class="ml-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">&times;</span>
+                </div>
+              `).join('')}
+              ${roomUsers.length === 0 ? '<span class="text-gray-400 text-sm">Drop users here</span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Add drag listeners
+      document.querySelectorAll('[draggable]').forEach(el => {
+        el.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('userId', e.target.dataset.userId);
+          e.target.classList.add('opacity-50');
+        });
+        el.addEventListener('dragend', e => {
+          e.target.classList.remove('opacity-50');
+        });
+      });
+
+      updateStats();
+    }
+
+    window.handleDrop = function(e, roomId) {
+      e.preventDefault();
+      const userId = parseInt(e.dataTransfer.getData('userId'));
+      const user = users.find(u => u.id === userId);
+      const room = rooms.find(r => r.id === roomId);
+      const roomUsers = users.filter(u => u.room === roomId);
+
+      if (user && room && roomUsers.length < room.capacity) {
+        user.room = roomId;
+        saveAppState();
+        render();
+      }
+    };
+
+    window.removeFromRoom = function(userId) {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        user.room = null;
+        saveAppState();
+        render();
+      }
+    };
+
+    // Initialize
+    init();
+  </script>
+</body>
+</html>

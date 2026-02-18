@@ -1,0 +1,47 @@
+summary: Update demo environment record
+description: Updates a demo environment record with provisioning details or status change
+lock: '!inline f/demo_provisioner/update_environment.script.lock'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    id:
+      type: integer
+      description: The environment record ID
+      default: null
+    approved_by:
+      type: string
+      default: null
+      originalType: string
+    container_id:
+      type: string
+      default: null
+      originalType: string
+    container_name:
+      type: string
+      default: null
+      originalType: string
+    expires_at:
+      type: string
+      description: ISO timestamp for expiration
+      default: null
+      originalType: string
+    port:
+      type: integer
+      default: null
+    rejection_reason:
+      type: string
+      default: null
+      originalType: string
+    status:
+      type: string
+      description: New status
+      default: null
+      originalType: string
+    url:
+      type: string
+      default: null
+      originalType: string
+  required:
+    - id

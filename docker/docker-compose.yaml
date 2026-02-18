@@ -1,0 +1,131 @@
+services:
+  # Windmill database
+  windmill_db:
+    image: postgres:16
+    container_name: training-windmill-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: windmill
+    volumes:
+      - windmill_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d windmill"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - windmill
+
+  # Windmill server
+  windmill_server:
+    image: ghcr.io/windmill-labs/windmill:main
+    container_name: training-windmill-server
+    environment:
+      DATABASE_URL: postgres://postgres:changeme@windmill_db:5432/windmill?sslmode=disable
+      MODE: server
+      BASE_URL: http://localhost:8000
+      SUPERADMIN_SECRET: ${SUPERADMIN_SECRET:-training_secret_changeme}
+    depends_on:
+      windmill_db:
+        condition: service_healthy
+    networks:
+      - windmill
+
+  # Caddy reverse proxy
+  caddy:
+    image: ghcr.io/windmill-labs/caddy-l4:latest
+    container_name: training-caddy
+    ports:
+      - "8000:80"
+    environment:
+      - BASE_URL=":80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - windmill
+
+  # Windmill worker
+  windmill_worker:
+    image: ghcr.io/windmill-labs/windmill:main
+    container_name: training-windmill-worker
+    environment:
+      DATABASE_URL: postgres://postgres:changeme@windmill_db:5432/windmill?sslmode=disable
+      MODE: worker
+      WORKER_GROUP: default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - worker_cache:/tmp/windmill/cache
+    depends_on:
+      windmill_db:
+        condition: service_healthy
+    networks:
+      - windmill
+
+  # Windmill native worker (lightweight in-process jobs)
+  windmill_worker_native:
+    image: ghcr.io/windmill-labs/windmill:main
+    container_name: training-windmill-worker-native
+    environment:
+      DATABASE_URL: postgres://postgres:changeme@windmill_db:5432/windmill?sslmode=disable
+      MODE: worker
+      WORKER_GROUP: native
+      NATIVE_MODE: "true"
+      NUM_WORKERS: 8
+      SLEEP_QUEUE: 200
+    depends_on:
+      windmill_db:
+        condition: service_healthy
+    networks:
+      - windmill
+
+  # Windmill extras (LSP, Multiplayer, Debugger)
+  windmill_extra:
+    image: ghcr.io/windmill-labs/windmill-extra:latest
+    container_name: training-windmill-extra
+    ports:
+      - "3001:3001"  # LSP
+      - "3002:3002"  # Multiplayer
+      - "3003:3003"  # Debugger
+    environment:
+      - ENABLE_LSP=true
+      - ENABLE_MULTIPLAYER=true
+      - ENABLE_DEBUGGER=true
+      - DEBUGGER_PORT=3003
+      - REQUIRE_SIGNED_DEBUG_REQUESTS=false
+      - WINDMILL_BASE_URL=http://windmill_server:8000
+    volumes:
+      - lsp_cache:/pyls/.cache
+    networks:
+      - windmill
+
+  # Demo environments database (separate from Windmill)
+  demo_db:
+    image: postgres:15-alpine
+    container_name: training-demo-postgres
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo123
+      POSTGRES_DB: demo_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - demo_db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - windmill
+
+volumes:
+  windmill_db_data:
+  worker_cache:
+  demo_db_data:
+  lsp_cache:
+
+networks:
+  windmill:
+    driver: bridge

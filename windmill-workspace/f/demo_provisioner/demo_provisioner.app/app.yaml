@@ -1,0 +1,404 @@
+summary: Demo Environment Provisioner
+value:
+  fullscreen: false
+  grid:
+    - '12':
+        fixed: true
+        fullHeight: false
+        h: 1
+        w: 5
+        x: 0
+        'y': 0
+      '3':
+        fixed: true
+        fullHeight: false
+        h: 1
+        w: 6
+        x: 0
+        'y': 0
+      id: title
+      data:
+        id: title
+        type: textcomponent
+        componentInput:
+          type: static
+          value: Demo Environment Provisioner
+          fieldType: text
+        configuration:
+          copyButton:
+            type: static
+            value: false
+          disableNoText:
+            type: static
+            value: false
+          style:
+            type: static
+            value: Title
+          tooltip:
+            type: static
+        customCss:
+          container:
+            class: ''
+            style: ''
+          text:
+            class: text-2xl font-bold
+            style: ''
+        horizontalAlignment: left
+        verticalAlignment: center
+    - '12':
+        fixed: false
+        fullHeight: false
+        h: 1
+        w: 2
+        x: 10
+        'y': 0
+      '3':
+        fixed: false
+        fullHeight: false
+        h: 1
+        w: 4
+        x: 0
+        'y': 9
+      id: a
+      data:
+        id: a
+        type: recomputeallcomponent
+        configuration:
+          defaultRefreshInterval:
+            type: static
+            value: '0'
+        customCss:
+          container:
+            class: ''
+            style: ''
+        horizontalAlignment: center
+        menuItems: []
+        verticalAlignment: center
+    - '12':
+        fixed: false
+        fullHeight: false
+        h: 21
+        w: 4
+        x: 0
+        'y': 1
+      '3':
+        fixed: false
+        fullHeight: false
+        h: 8
+        w: 3
+        x: 0
+        'y': 1
+      id: provision_form
+      data:
+        id: provision_form
+        type: formcomponent
+        componentInput:
+          type: runnable
+          autoRefresh: false
+          fields:
+            app_name:
+              type: user
+              value: Demo Workspace
+              fieldType: string
+            customer_name:
+              type: user
+              value: null
+              fieldType: string
+            num_rooms:
+              type: user
+              value: 4
+              fieldType: integer
+            num_users:
+              type: user
+              value: 10
+              fieldType: integer
+            ttl_minutes:
+              type: user
+              value: 30
+              fieldType: integer
+          fieldType: any
+          recomputeOnInputChanged: false
+          runnable:
+            type: path
+            name: Provision demo flow
+            path: f/demo_provisioner/provision_demo
+            runType: flow
+            schema:
+              $schema: 'https://json-schema.org/draft/2020-12/schema'
+              type: object
+              order:
+                - customer_name
+                - app_name
+                - num_users
+                - num_rooms
+                - ttl_minutes
+              properties:
+                app_name:
+                  type: string
+                  description: Name to display in the demo app
+                  default: Demo Workspace
+                customer_name:
+                  type: string
+                  description: Name of the customer for this demo
+                num_rooms:
+                  type: integer
+                  description: Number of meeting rooms
+                  default: 4
+                num_users:
+                  type: integer
+                  description: Number of users to generate
+                  default: 10
+                ttl_minutes:
+                  type: integer
+                  description: How long the demo should run (minutes)
+                  default: 30
+              required:
+                - customer_name
+        configuration:
+          clearFormInputs:
+            type: oneOf
+            configuration:
+              never: {}
+            selected: never
+          color:
+            type: static
+            value: blue
+          label:
+            type: static
+            value: Request Demo Environment
+          onError:
+            type: oneOf
+            configuration:
+              sendErrorToast:
+                appendError:
+                  type: static
+                  value: true
+                message:
+                  type: static
+                  value: Failed to submit request
+            selected: sendErrorToast
+          onSubmit:
+            type: oneOf
+            configuration:
+              none: {}
+            selected: none
+          onSuccess:
+            type: oneOf
+            configuration:
+              sendToast:
+                message:
+                  type: static
+                  value: Demo request submitted!
+            selected: sendToast
+          size:
+            type: static
+            value: md
+        customCss:
+          button:
+            class: ''
+            style: ''
+          container:
+            class: bg-surface p-4 rounded-lg shadow
+            style: ''
+        horizontalAlignment: center
+        recomputeIds:
+          - bg_list_environments
+    - '12':
+        fixed: false
+        fullHeight: false
+        h: 20
+        w: 8
+        x: 4
+        'y': 2
+      '3':
+        fixed: false
+        fullHeight: false
+        h: 10
+        w: 3
+        x: 0
+        'y': 11
+      id: environments_table
+      data:
+        id: environments_table
+        type: aggridcomponent
+        actions:
+          - id: environments_table_a
+            type: buttoncomponent
+            componentInput:
+              type: runnable
+              autoRefresh: false
+              fields:
+                customer_name:
+                  type: evalv2
+                  value: null
+                  connections:
+                    - id: selectedRow
+                      componentId: environments_table
+                  expr: environments_table.selectedRow.customer_name
+                  fieldType: string
+              fieldType: any
+              recomputeOnInputChanged: false
+              runnable:
+                type: path
+                name: f/demo_provisioner/cleanup_container
+                path: f/demo_provisioner/cleanup_container
+                runType: script
+                schema:
+                  $schema: 'https://json-schema.org/draft/2020-12/schema'
+                  type: object
+                  order:
+                    - customer_name
+                  properties:
+                    customer_name:
+                      type: string
+                      description: ''
+                      default: null
+                      originalType: string
+                  required:
+                    - customer_name
+            configuration:
+              afterIcon:
+                type: static
+              beforeIcon:
+                type: static
+                value: trash
+              color:
+                type: static
+                value: red
+              confirmationModal:
+                type: oneOf
+                configuration:
+                  none: {}
+                selected: none
+              disabled:
+                type: static
+                value: false
+              fillContainer:
+                type: static
+                value: false
+              label:
+                type: evalv2
+                value: Press me
+                connections: []
+                expr: ''
+              onError:
+                type: oneOf
+                configuration:
+                  errorOverlay: {}
+                selected: errorOverlay
+              onSubmit:
+                type: oneOf
+                configuration:
+                  none: {}
+                selected: none
+              onSuccess:
+                type: oneOf
+                configuration:
+                  none: {}
+                selected: none
+              runInBackground:
+                type: static
+                value: false
+              size:
+                type: static
+                value: sm
+              tooltip:
+                type: static
+                value: ''
+              triggerOnAppLoad:
+                type: static
+                value: false
+            customCss:
+              button:
+                class: ''
+                style: ''
+              container:
+                class: ''
+                style: ''
+            horizontalAlignment: center
+            recomputeIds: []
+            verticalAlignment: center
+        componentInput:
+          type: connected
+          connection:
+            componentId: bg_0
+            path: result
+          fieldType: array
+        configuration:
+          allEditable:
+            type: static
+            value: false
+          columnDefs:
+            type: static
+            value:
+              - field: customer_name
+                flex: 1
+                headerName: Customer
+              - field: app_name
+                flex: 1
+                headerName: App Name
+              - field: status
+                flex: 1
+                headerName: Status
+              - cellRendererType: link
+                field: url
+                flex: 2
+                headerName: URL
+              - field: expires_at
+                flex: 1
+                headerName: Expires At
+              - _isActionsColumn: true
+                field: __actions__
+                flex: 1
+                headerName: Actions
+          compactness:
+            type: static
+            value: normal
+          customActionsHeader:
+            type: static
+          extraConfig:
+            type: static
+          flex:
+            type: static
+            value: true
+          footer:
+            type: static
+            value: false
+          multipleSelectable:
+            type: static
+            value: false
+          pagination:
+            type: static
+            value: false
+          rowIdCol:
+            type: static
+          rowMultiselectWithClick:
+            type: static
+            value: false
+          selectFirstRowByDefault:
+            type: static
+            value: false
+          wrapActions:
+            type: static
+            value: false
+        customCss:
+          container:
+            class: ''
+            style: ''
+  hiddenInlineScripts:
+    - name: bg_list_environments
+      autoRefresh: true
+      fields: {}
+      inlineScript:
+        content: '!inline bg_list_environments.inline_script.py'
+        lock: '!inline bg_list_environments.inline_script.lock'
+        language: python3
+        path: bg_list_environments
+      recomputeIds: []
+      recomputeOnInputChanged: true
+      refreshOnStart: true
+  hideLegacyTopBar: true
+  mobileViewOnSmallerScreens: false
+  norefreshbar: false
+  subgrids: {}
+  unusedInlineScripts: []

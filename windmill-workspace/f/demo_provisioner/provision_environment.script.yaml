@@ -1,0 +1,39 @@
+summary: Provision demo environment
+description: >-
+  Spins up a Docker container running the Team Workspace demo app with the
+  specified configuration
+lock: '!inline f/demo_provisioner/provision_environment.script.lock'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    app_name:
+      type: string
+      description: Name shown in the app header
+      default: Demo Workspace
+      originalType: string
+    customer_name:
+      type: string
+      description: Name of the customer (used for container naming and display)
+      default: null
+      originalType: string
+    num_rooms:
+      type: integer
+      description: Number of meeting rooms to create
+      default: 4
+    num_users:
+      type: integer
+      description: Number of users to generate in the demo
+      default: 10
+    record_id:
+      type: integer
+      description: ''
+      default: null
+    ttl_minutes:
+      type: integer
+      description: How long the environment should run before expiring
+      default: 30
+  required:
+    - customer_name
+    - record_id

@@ -1,0 +1,3 @@
+description: Public hostname for demo containers. Change to your server's hostname if not running locally.
+value: localhost
+is_secret: false
