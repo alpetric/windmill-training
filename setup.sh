@@ -106,6 +106,13 @@ curl -s -X POST "$WINDMILL_URL/api/w/$WORKSPACE_NAME/users/add" \
     -H "Content-Type: application/json" \
     -d "{\"email\": \"$ADMIN_EMAIL\", \"is_admin\": true}" 2>/dev/null || true
 
+# Set base_url to skip first-time setup wizard
+echo -e "${YELLOW}Configuring instance settings...${NC}"
+curl -s -X POST "$WINDMILL_URL/api/settings/global/base_url" \
+    -H "Authorization: Bearer $SUPERADMIN_SECRET" \
+    -H "Content-Type: application/json" \
+    -d "\"$WINDMILL_URL\"" 2>/dev/null || true
+
 # Step 6: Login as admin user to get API token
 echo -e "${YELLOW}Logging in as admin user...${NC}"
 API_TOKEN=$(curl -s -X POST "$WINDMILL_URL/api/auth/login" \
