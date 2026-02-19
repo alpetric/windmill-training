@@ -104,19 +104,17 @@ curl -s -X POST "$WINDMILL_URL/api/w/$WORKSPACE_NAME/users/add" \
     -H "Content-Type: application/json" \
     -d "{\"email\": \"$ADMIN_EMAIL\", \"is_admin\": true}" 2>/dev/null || true
 
-# Step 6: Generate API token for admin
-echo -e "${YELLOW}Generating API token...${NC}"
-TOKEN_RESPONSE=$(curl -s -X POST "$WINDMILL_URL/api/users/tokens/create" \
-    -H "Authorization: Bearer $SUPERADMIN_SECRET" \
+# Step 6: Login as admin user to get API token
+echo -e "${YELLOW}Logging in as admin user...${NC}"
+API_TOKEN=$(curl -s -X POST "$WINDMILL_URL/api/auth/login" \
     -H "Content-Type: application/json" \
-    -d "{\"label\": \"setup-token\", \"expiration\": null, \"scopes\": null}")
-API_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.' 2>/dev/null || echo "$TOKEN_RESPONSE")
+    -d "{\"email\": \"$ADMIN_EMAIL\", \"password\": \"$ADMIN_PASSWORD\"}" | tr -d '"')
 
 if [ -z "$API_TOKEN" ] || [ "$API_TOKEN" = "null" ]; then
-    echo -e "${RED}Failed to generate API token. Response: $TOKEN_RESPONSE${NC}"
+    echo -e "${RED}Failed to login as admin user.${NC}"
     exit 1
 fi
-echo -e "${GREEN}API token generated.${NC}"
+echo -e "${GREEN}Logged in successfully.${NC}"
 
 # Step 7: Configure wmill CLI and sync
 echo -e "${YELLOW}Configuring wmill CLI...${NC}"
