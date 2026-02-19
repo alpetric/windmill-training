@@ -24,9 +24,11 @@ command -v jq >/dev/null 2>&1 || { echo -e "${RED}jq is required but not install
 command -v wmill >/dev/null 2>&1 || { echo -e "${RED}wmill CLI is required but not installed. Install with: npm install -g windmill-cli${NC}" >&2; exit 1; }
 echo -e "${GREEN}All requirements met.${NC}"
 
-# Step 1: Start Docker containers
-echo -e "${YELLOW}Starting Docker containers...${NC}"
+# Step 1: Pull latest images and start Docker containers
+echo -e "${YELLOW}Pulling latest Docker images...${NC}"
 cd docker
+docker compose pull
+echo -e "${YELLOW}Starting Docker containers...${NC}"
 SUPERADMIN_SECRET="$SUPERADMIN_SECRET" docker compose up -d
 cd ..
 
